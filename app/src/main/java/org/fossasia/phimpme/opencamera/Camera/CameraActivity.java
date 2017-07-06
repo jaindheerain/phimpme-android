@@ -34,6 +34,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.os.StatFs;
 import android.preference.PreferenceManager;
@@ -50,6 +51,7 @@ import android.util.SparseIntArray;
 import android.view.GestureDetector;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
@@ -59,7 +61,15 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Toast;
 import android.widget.ZoomControls;
+import android.app.VoiceInteractor;
+import android.app.VoiceInteractor.PickOptionRequest;
+import android.app.VoiceInteractor.PickOptionRequest.Option;
+import android.view.Gravity;
+import android.widget.TextView;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.mikepenz.iconics.view.IconicsImageView;
 
@@ -772,7 +782,90 @@ public class CameraActivity extends BaseActivity implements AudioListener.AudioL
 		if( MyDebug.LOG ) {
 			Log.d(TAG, "onResume: total time to resume: " + (System.currentTimeMillis() - debug_time));
 		}
+		if (CameraActivity.this.isVoiceInteraction()) {
+				startVoiceTrigger();
+		}
 	}
+
+	private void startVoiceTrigger() {
+		Log.d(TAG, "startVoiceTrigger: ");
+
+        Option rear = new VoiceInteractor.PickOptionRequest.Option("Rear Camera", 0);
+        rear.addSynonym("Rear");
+        rear.addSynonym("Back");
+        rear.addSynonym("Normal");
+
+		Option front = new VoiceInteractor.PickOptionRequest.Option("Front Camera", 1);
+		front.addSynonym("Front");
+		front.addSynonym("Selfie");
+		front.addSynonym("Forward");
+
+		CameraActivity.this.getVoiceInteractor()
+				.submitRequest(new PickOptionRequest(
+						new VoiceInteractor.Prompt("Which camera would you like to use?"),
+						new Option[]{front, rear},
+						null) {
+
+					@Override
+					public void onPickOptionResult(boolean finished, Option[] selections, Bundle result) {
+						if (finished && selections.length == 1) {
+							Message message = Message.obtain();
+							message.obj = result;
+							if (selections[0].getIndex() == 0)
+							{	rearCamera();
+								asktakePicture();
+							}
+							if (selections[0].getIndex() == 1)
+							{
+								asktakePicture();
+							}
+						}else{
+							getActivity().finish();
+						}
+					}
+					@Override
+					public void onCancel() {
+						getActivity().finish();
+					}
+				});
+	}
+	private void rearCamera() {
+		int cameraId = getNextCameraId();
+		this.preview.setCamera(cameraId);
+		return;
+	}
+
+	private void asktakePicture() {
+		Option option = new VoiceInteractor.PickOptionRequest.Option("cheese", 2);
+		option.addSynonym("ready");
+		option.addSynonym("go");
+		option.addSynonym("take it");
+		option.addSynonym("ok");
+
+		CameraActivity.this.getVoiceInteractor()
+				.submitRequest(new PickOptionRequest(
+						new VoiceInteractor.Prompt("say cheese"),
+						new Option[]{option},
+						null) {
+
+					@Override
+					public void onPickOptionResult(boolean finished, Option[] selections, Bundle result) {
+						if (finished && selections.length == 1) {
+							Message message = Message.obtain();
+							message.obj = result;
+							takePicture();
+						} else {
+							getActivity().finish();
+						}
+					}
+					@Override
+					public void onCancel() {
+						getActivity().finish();
+					}
+				});
+	}
+
+
 
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {

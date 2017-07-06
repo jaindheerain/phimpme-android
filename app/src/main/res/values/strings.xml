@@ -815,4 +815,6 @@
     <string name="feature_not_present">Feature not present</string>
     <string name="sharedrupal">Drupal Account</string>
     <string name="drupal_link">Account not found</string>
+    <!--Camera voice -->
+    <string name="ready">ready</string>
 </resources>
